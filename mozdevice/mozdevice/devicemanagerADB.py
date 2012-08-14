@@ -91,7 +91,9 @@ class DeviceManagerADB(DeviceManager):
     if self.host:
       self.disconnectRemoteADB()
 
-  # external function: executes shell command on device
+  # external function: executes shell command on device.
+  # timeout is specified in seconds, and if no timeout is given, 
+  # we will run until the script returns
   # returns:
   # success: <return code>
   # failure: None
@@ -119,6 +121,7 @@ class DeviceManagerADB(DeviceManager):
     proc = subprocess.Popen(args,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if timeout:
+        timeout = int(timeout)
         start_time = time.time()
         ret_code = proc.poll()
         while ((time.time() - start_time) <= timeout) and ret_code == None:
@@ -720,6 +723,8 @@ class DeviceManagerADB(DeviceManager):
       args.insert(2, self.packageName)
     return self.runCmd(args)
 
+  # timeout is specified in seconds, and if no timeout is given, 
+  # we will run until the script returns
   def checkCmd(self, args, timeout=None):
     # If we are not root but have run-as, and we're trying to execute 
     # a shell command then using run-as is the best we can do
@@ -731,6 +736,7 @@ class DeviceManagerADB(DeviceManager):
       args.insert(2, self.packageName)
     finalArgs.extend(args)
     if timeout:
+        timeout = int(timeout)
         proc = subprocess.Popen(finalArgs)
         start_time = time.time()
         ret_code = proc.poll()
