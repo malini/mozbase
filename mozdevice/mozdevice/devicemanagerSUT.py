@@ -126,6 +126,8 @@ class DeviceManagerSUT(DeviceManager):
     one fails.  this is necessary in particular for pushFile(), where we don't want
     to accidentally send extra data if a failure occurs during data transmission.
     '''
+    if timeout:
+      raise NotImplementedError("'timeout' parameter is not yet supported")
     done = False
     while self.retries < self.retrylimit:
       try:
