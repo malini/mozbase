@@ -59,11 +59,11 @@ def main(args=sys.argv[1:]):
 
     # run the tests
     suite = unittest.TestSuite(unittestlist)
-    runner = unittest.TextTestRunner()
+    runner = unittest.TextTestRunner(verbosity=2) # default=1 does not show success of unittests
     results = TestResultCollection.from_unittest_results(runner.run(suite))
 
     # exit according to results
-    sys.exit(1 if len(list(results.unsuccessful)) else 0)
+    sys.exit(1 if results.num_failures else 0)
 
 if __name__ == '__main__':
     main()

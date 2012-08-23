@@ -5,17 +5,14 @@
 import select
 import socket
 import SocketServer
-import time, datetime
+import time
 import os
 import re
-import hashlib
 import posixpath
 import subprocess
 from threading import Thread
-import traceback
-import sys
 import StringIO
-from devicemanager import DeviceManager, DMError, FileError, NetworkTools, _pop_last_line
+from devicemanager import DeviceManager, FileError, NetworkTools, _pop_last_line
 import errno
 
 class AgentError(Exception):
@@ -128,7 +125,6 @@ class DeviceManagerSUT(DeviceManager):
     '''
     if timeout:
       raise NotImplementedError("'timeout' parameter is not yet supported")
-    done = False
     while self.retries < self.retrylimit:
       try:
         self._doCmds(cmdlist, outputfile, timeout)
@@ -189,7 +185,7 @@ class DeviceManagerSUT(DeviceManager):
           sent = self._sock.send(cmd['data'])
           if sent != len(cmd['data']):
               raise AgentError("ERROR: we had %s bytes of data to send, but "
-                               "only sent %s" % (len(cmd['data'], sent)))
+                               "only sent %s" % (len(cmd['data']), sent))
 
         if (self.debug >= 4): print "sent cmd: " + str(cmd['cmd'])
       except socket.error, msg:
@@ -505,20 +501,15 @@ class DeviceManagerSUT(DeviceManager):
         return None
 
     try:
-      data = self.runCmds([{ 'cmd': 'exec ' + appname }])
+      self.runCmds([{ 'cmd': 'exec ' + appname }])
     except AgentError:
       return None
 
-    # wait up to 30 seconds for process to start up
-    timeslept = 0
-    while (timeslept <= 30):
-      process = self.processExist(appname)
-      if (process is not None):
-        break
-      time.sleep(3)
-      timeslept += 3
-
+    # The 'exec' command may wait for the process to start and end, so checking
+    # for the process here may result in process = None.
+    process = self.processExist(appname)
     if (self.debug >= 4): print "got pid: %s for process: %s" % (process, appname)
+
     return process
 
   # external function
@@ -554,7 +545,7 @@ class DeviceManagerSUT(DeviceManager):
     if forceKill:
       print "WARNING: killProcess(): forceKill parameter unsupported on SUT"
     try:
-      data = self.runCmds([{ 'cmd': 'kill ' + appname }])
+      self.runCmds([{ 'cmd': 'kill ' + appname }])
     except AgentError:
       return False
 
@@ -647,7 +638,8 @@ class DeviceManagerSUT(DeviceManager):
     # or, if error,
     # <filename>,-1\n<error message>
     try:
-      data = self.runCmds([{ 'cmd': 'pull ' + remoteFile }])
+      # just send the command first, we read the response inline below
+      self.runCmds([{ 'cmd': 'pull ' + remoteFile }])
     except AgentError:
       return None
 
@@ -887,7 +879,6 @@ class DeviceManagerSUT(DeviceManager):
     cmd = 'rebt'
 
     if (self.debug > 3): print "INFO: sending rebt command"
-    callbacksvrstatus = None
 
     if (ipAddr is not None):
     #create update.info file:
@@ -920,7 +911,7 @@ class DeviceManagerSUT(DeviceManager):
   # os - name of the os
   # id - unique id of the device
   # uptime - uptime of the device
-  # uptimemillis - uptime of the device in milliseconds
+  # uptimemillis - uptime of the device in milliseconds (SUTAgent 1.11+)
   # systime - system time of the device
   # screen - screen resolution
   # rotation - rotation of the device (in degrees)
