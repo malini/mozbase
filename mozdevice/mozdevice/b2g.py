@@ -5,7 +5,6 @@
 import datetime
 import mozprofile
 import os
-import re
 import time
 import socket
 import StringIO
@@ -17,7 +16,7 @@ from mozdevice import DMError
 
 class B2GManager(object):
 
-    def __init__(self, dm, tmpdir, userJS=None, marionette_host=None, marionette_port=None):
+    def __init__(self, dm, tmpdir=None, userJS=None, marionette_host=None, marionette_port=None):
         self.dm = dm
         self.tmpdir = tmpdir
         self.userJS = userJS or "/data/local/user.js"
@@ -25,6 +24,7 @@ class B2GManager(object):
         self.marionette_port = marionette_port or 2828
         self.marionette = None
 
+    #timeout in seconds
     def wait_for_port(self, timeout):
         print "waiting for port"
         starttime = datetime.datetime.now()
@@ -42,8 +42,10 @@ class B2GManager(object):
                 import traceback
                 print traceback.format_exc()
             time.sleep(1)
-        print "returning false"
         return False
+ 
+    def get_marionette(self):
+        self.marionette = Marionette(self.marionette_host, self.marionette_port)
 
     def restart_b2g(self):
         #restart b2g so we start with a clean slate
@@ -56,9 +58,14 @@ class B2GManager(object):
         print "connect to marionette"
         if not self.wait_for_port(30):
             raise Exception("Could not communicate with Marionette port after restarting B2G")
-        self.marionette = Marionette(self.marionette_host, self.marionette_port)
+        self.get_marionette() 
+
+    def set_tmpdir(self, tmpdir):
+        self.tmpdir = tmpdir
     
     def setup_profile(self, prefs):
+        if not self.tmpdir:
+            raise Exception("You must set the tmpdir")
         #remove previous user.js if there is one
         our_user_js = os.path.join(self.tmpdir, "user.js")
         if os.path.exists(our_user_js):
@@ -86,6 +93,7 @@ class B2GManager(object):
                           'tcp:%s' % self.marionette_port])
 
     def setup_ethernet(self):
+        #TODO: need to add timeout
         tries = 3
         while tries > 0:
             print "on try: %d" % tries
@@ -103,8 +111,25 @@ class B2GManager(object):
         raise DMError("Could not set up ethernet connection")
 
     def restore_profile(self):
+        if not self.tmpdir:
+            raise Exception("You must set the tmpdir")
         #if we successfully copied the profile, make a backup of the file
         our_user_js = os.path.join(self.tmpdir, "user.js")
         if os.path.exists(our_user_js): 
             self.dm.checkCmd(['shell', 'dd', 'if=%s.orig' % self.userJS, 'of=%s' % self.userJS])
 
+    def get_appinfo(self):
+        if not self.marionette:
+            self.forward_port()
+            self.wait_for_port(30)
+            self.get_marionette()
+        self.marionette.start_session()
+        self.marionette.set_context("chrome")
+        appinfo = self.marionette.execute_script("""
+                                var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
+                                .getService(Components.interfaces.nsIXULAppInfo);
+                                return appInfo;
+                                """)
+        (year, month, day) = (appinfo["appBuildID"][0:4], appinfo["appBuildID"][4:6], appinfo["appBuildID"][6:8])
+        appinfo['date'] =  "%s-%s-%s" % (year, month, day)
+        return appinfo
