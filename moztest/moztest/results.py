@@ -12,17 +12,23 @@ class TestContext(object):
     """ Stores context data about the test """
 
     attrs = ['hostname', 'arch', 'env', 'os', 'os_version', 'tree', 'revision',
-             'product']
+             'product', 'logfile', 'testgroup', 'harness', 'buildtype']
 
-    def __init__(self, hostname='localhost', tree='', revision='', product=''):
+    def __init__(self, hostname='localhost', tree='', revision='', product='',
+                 logfile=None, arch='', operating_system='', testgroup='',
+                 harness='moztest', buildtype=''):
         self.hostname = hostname
-        self.arch = mozinfo.processor
+        self.arch = arch or mozinfo.processor
         self.env = os.environ.copy()
-        self.os = mozinfo.os
+        self.os = operating_system or mozinfo.os
         self.os_version = mozinfo.version
         self.tree = tree
         self.revision = revision
         self.product = product
+        self.logfile = logfile
+        self.testgroup = testgroup
+        self.harness = harness
+        self.buildtype = buildtype
 
     def __str__(self):
         return '%s (%s, %s)' % (self.hostname, self.os, self.arch)
@@ -72,6 +78,7 @@ class TestResult(object):
         test_class = the class that the test belongs to
         time_start = timestamp (seconds since UNIX epoch) of when the test started
                      running; if not provided, defaults to the current time
+                     ! Provide 0 if you only have the duration
         context = TestContext instance; can be None
         result_expected = string representing the expected outcome of the test"""
 
@@ -123,7 +130,8 @@ class TestResult(object):
         return 'ERROR'
 
     def finish(self, result, time_end=None, output=None, reason=None):
-        """ Marks the test as finished, storing its end time and status """
+        """ Marks the test as finished, storing its end time and status
+        ! Provide the duration as time_end if you only have that. """
         msg = "Result '%s' not in possible results: %s" %\
                     (result, ', '.join(self.POSSIBLE_RESULTS))
         assert result in self.POSSIBLE_RESULTS, msg
@@ -253,7 +261,7 @@ class TestResultCollection(list):
                 add_test_result(test)
 
     @classmethod
-    def from_unittest_results(cls, *results):
+    def from_unittest_results(cls, context, *results):
         """ Creates a TestResultCollection containing the given python
         unittest results """
 
@@ -261,7 +269,7 @@ class TestResultCollection(list):
             return cls('from unittest')
 
         # all the TestResult instances share the same context
-        context = TestContext()
+        context = context or TestContext()
 
         collection = cls('from %s' % results[0].__class__.__name__)
 
