@@ -43,7 +43,7 @@ class B2GManager(object):
                 print traceback.format_exc()
             time.sleep(1)
         return False
- 
+
     def get_marionette(self):
         self.marionette = Marionette(self.marionette_host, self.marionette_port)
 
@@ -53,16 +53,16 @@ class B2GManager(object):
         # Wait for a bit to make sure B2G has completely shut down.
         time.sleep(10)
         self.dm.checkCmd(['shell', 'start', 'b2g'])
-        
+
         #wait for marionette port to come up
         print "connect to marionette"
         if not self.wait_for_port(30):
             raise Exception("Could not communicate with Marionette port after restarting B2G")
-        self.get_marionette() 
+        self.get_marionette()
 
     def set_tmpdir(self, tmpdir):
         self.tmpdir = tmpdir
-    
+
     def setup_profile(self, prefs):
         if not self.tmpdir:
             raise Exception("You must set the tmpdir")
@@ -76,7 +76,7 @@ class B2GManager(object):
         except subprocess.CalledProcessError:
             pass
         #if we successfully copied the profile, make a backup of the file
-        if os.path.exists(our_user_js): 
+        if os.path.exists(our_user_js):
             self.dm.checkCmd(['shell', 'dd', 'if=%s' % self.userJS, 'of=%s.orig' % self.userJS])
         print "opening userjs"
         user_js = open(our_user_js, 'a')
@@ -115,7 +115,7 @@ class B2GManager(object):
             raise Exception("You must set the tmpdir")
         #if we successfully copied the profile, make a backup of the file
         our_user_js = os.path.join(self.tmpdir, "user.js")
-        if os.path.exists(our_user_js): 
+        if os.path.exists(our_user_js):
             self.dm.checkCmd(['shell', 'dd', 'if=%s.orig' % self.userJS, 'of=%s' % self.userJS])
 
     def get_appinfo(self):
